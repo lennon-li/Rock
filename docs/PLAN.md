@@ -23,11 +23,63 @@ Rock = R/data-science safety workflow
      + mounted synthetic workspace
      + reproducible R environment
      + HolyClaude as the initial runtime engine
+     + optional SSH bridge to Hermes / Mac mini
 ```
 
 HolyClaude should be treated as the current base image, not as the identity of the project.
 
 This keeps Rock replaceable later. If HolyClaude becomes too broad, too permissive, or too hard to audit, Rock should be able to move to a cleaner base such as `rocker/r-ver` or another minimal Linux image.
+
+## Target Architecture
+
+Rock should support three operating modes.
+
+```text
+Mode 1: Local-only agent dock
+  Windows / Linux / macOS host
+    -> Docker / Docker Desktop / WSL2
+      -> Rock container
+        -> mounted synthetic workspace only
+
+Mode 2: Local agent dock with Hermes bridge
+  Windows laptop
+    -> WSL2 + Docker Desktop
+      -> Rock container
+        -> mounted synthetic workspace only
+        -> outbound SSH to Mac mini / Hermes
+
+Mode 3: Remote-accessed local dock
+  User device
+    -> Tailscale / SSH tunnel / Cloudflare Access
+      -> Rock host
+        -> Rock container web UI
+```
+
+The default should be Mode 1.
+
+Mode 2 is allowed when Rock needs to talk to a long-running Hermes host, for example a Mac mini that stores persistent agent workflows, memory, logs, or coordination services.
+
+Mode 3 should never mean public port-forwarding directly to the web UI.
+
+## System Boundary Model
+
+Rock separates four boundaries:
+
+```text
+1. Host system boundary
+   Protected by Docker containerization.
+
+2. Data/project boundary
+   Protected by mounting only approved workspace folders.
+
+3. Agent authority boundary
+   Protected by permission mode, startup policy, and human checkpoints.
+
+4. Remote-control boundary
+   Protected by local-only ports, SSH, Tailscale, or Cloudflare Access.
+```
+
+The important point: the container protects the host environment, but it does not automatically protect mounted data. Any mounted path is inside the agent's reach. Therefore Rock must make safe mounting the default.
 
 ## Recommendation
 
@@ -69,6 +121,7 @@ These are relatively stable and expensive to install repeatedly:
 - heavy or stable R packages
 - stable CLI tools not already available in HolyClaude
 - Quarto or Pandoc if required
+- openssh-client if not already present in the base image
 ```
 
 ### Mounted from the host
@@ -83,6 +136,7 @@ These should stay outside the image so they can be updated without rebuilding:
 - Claude/Codex/OpenCode configuration
 - package manifests
 - local test projects
+- optional read-only SSH client keys for Hermes access
 ```
 
 ### Updated at runtime only when acceptable
@@ -108,12 +162,18 @@ Rock/
 │   ├── claude/
 │   ├── codex/
 │   ├── opencode/
-│   └── skills/
+│   ├── skills/
+│   └── ssh/
+│       ├── config.example
+│       └── known_hosts.example
+├── data/
+│   └── claude/
 ├── workspace/
 │   └── synthetic-only/
 ├── docs/
 │   └── PLAN.md
 ├── compose.yaml
+├── compose.hermes.yaml
 ├── .env.example
 ├── renv.lock
 └── README.md
@@ -143,6 +203,7 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libtiff5-dev \
     libjpeg-dev \
+    openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 COPY docker/install-r-packages.R /tmp/install-r-packages.R
@@ -156,7 +217,7 @@ WORKDIR /workspace
 
 The compose file should mount only what the agent is allowed to touch.
 
-Initial pattern:
+Initial local-only pattern:
 
 ```yaml
 services:
@@ -184,6 +245,108 @@ services:
 
 For high-trust synthetic-only work, `bypassPermissions` can be considered, but only after the mounted workspace is verified to contain no real sensitive data.
 
+## Hermes / Mac mini SSH Bridge
+
+Rock may need to connect outward to a Mac mini running Hermes.
+
+This should be outbound SSH from Rock to the Mac mini, not inbound SSH into Rock.
+
+Preferred pattern:
+
+```text
+Rock container -> SSH client -> Mac mini / Hermes
+```
+
+Avoid running an SSH server inside Rock unless there is a specific operational need.
+
+Recommended SSH mount pattern:
+
+```yaml
+services:
+  rock:
+    volumes:
+      - ./data/claude:/home/claude/.claude
+      - ./config/skills:/opt/rock/skills:ro
+      - ./config/ssh:/home/claude/.ssh:ro
+      - ./workspace/synthetic-only:/workspace
+```
+
+Example command from inside Rock:
+
+```bash
+ssh hermes@mac-mini.local
+```
+
+or with an explicit key:
+
+```bash
+ssh -i ~/.ssh/hermes_key hermes@mac-mini.local
+```
+
+SSH rules:
+
+```text
+- Mount SSH keys read-only.
+- Use a dedicated key for Hermes, not a broad personal key.
+- Prefer restricted Mac mini user permissions.
+- Do not mount the host's entire ~/.ssh directory by default.
+- Put known hosts in config/ssh/known_hosts.
+- Keep Hermes access optional; Rock should still run without it.
+```
+
+## Inbound Access to Rock
+
+Default inbound access should be through:
+
+```text
+- local browser to 127.0.0.1:3001
+- docker exec -it rock bash
+- HolyClaude / CloudCLI web terminal
+```
+
+Avoid adding SSH server access into Rock by default.
+
+If SSH into the container is ever required, it should be local-only:
+
+```yaml
+ports:
+  - "127.0.0.1:2222:22"
+```
+
+and treated as an advanced profile, not the default.
+
+## Windows Support
+
+Rock should explicitly support Windows through WSL2 and Docker Desktop.
+
+Recommended Windows setup:
+
+```text
+Windows 11
+  -> WSL2 backend
+    -> Docker Desktop
+      -> Rock repo cloned inside WSL filesystem
+        -> docker compose up -d
+```
+
+Recommended repo location:
+
+```bash
+~/projects/Rock
+```
+
+Avoid using `/mnt/c/...` for the active repo and workspace when possible, because file watching, permissions, and filesystem performance are usually worse through the Windows-mounted filesystem.
+
+Windows-specific notes:
+
+```text
+- Use Docker Desktop with WSL2 backend.
+- Clone Rock inside Ubuntu/WSL, not under C:\Users if possible.
+- Keep mounted synthetic workspace under the WSL filesystem.
+- Browser access should remain localhost-bound.
+- SSH from Rock to Mac mini should work if the Windows/WSL network can resolve or reach the Mac mini.
+```
+
 ## Data Boundary Policy
 
 Rock should make the safe path easy and the risky path obvious.
@@ -203,6 +366,7 @@ Avoid mounting broad locations such as:
 - Downloads
 - entire GitHub folder
 - cloud-synced personal folders
+- host ~/.ssh
 - folders containing real PHI, PII, credentials, or production data
 ```
 
@@ -219,6 +383,7 @@ profile: synthetic      # full automation allowed
 profile: project-safe   # edits allowed, shell commands reviewed
 profile: sensitive      # read-only or human approval required
 profile: production     # no direct agent write access
+profile: hermes-bridge  # synthetic workspace + outbound SSH to Hermes
 ```
 
 ## Permission Policy
@@ -242,6 +407,7 @@ Use this rule:
 ```text
 If the agent can touch real data, do not use full auto-accept.
 If the agent can only touch synthetic/disposable data, full auto-accept may be acceptable.
+If the agent also has SSH access to Hermes, treat it as higher authority than local-only synthetic mode.
 ```
 
 ## Update Strategy
@@ -282,6 +448,16 @@ Mount them:
 ./config/skills:/opt/rock/skills:ro
 ```
 
+### SSH/Hermes config updates
+
+Do not rebuild the image for these.
+
+Mount them:
+
+```text
+./config/ssh:/home/claude/.ssh:ro
+```
+
 ## Phased Roadmap
 
 ### Phase 0 — Decision Record
@@ -289,6 +465,8 @@ Mount them:
 - Record the architecture decision: build on HolyClaude first.
 - Document why Rock remains base-image replaceable.
 - Define safe workspace assumptions.
+- Document Windows + WSL2 as the first supported host path.
+- Document optional outbound SSH bridge to Mac mini / Hermes.
 
 ### Phase 1 — Minimal Running Container
 
@@ -297,6 +475,7 @@ Mount them:
 - Add compose file.
 - Mount only `workspace/synthetic-only`.
 - Confirm Claude/Codex/OpenCode can see and edit only the mounted workspace.
+- Confirm container runs on Windows through WSL2 + Docker Desktop.
 
 ### Phase 2 — R/Data-Science Layer
 
@@ -322,11 +501,20 @@ Mount them:
   - real data filenames
   - large untracked raw data
   - cloud sync metadata
+  - host SSH keys
 - Add backup/snapshot command before agent auto-work.
 - Add post-run diff summary.
 - Add human approval checkpoint before pushing to GitHub.
 
-### Phase 5 — Independence Option
+### Phase 5 — Hermes Bridge
+
+- Add optional `compose.hermes.yaml`.
+- Add SSH config template.
+- Add known-hosts setup instructions.
+- Add a restricted Hermes SSH key workflow.
+- Add smoke test: Rock can SSH to Hermes but cannot access broader host data.
+
+### Phase 6 — Independence Option
 
 If HolyClaude becomes limiting, build a second base:
 
@@ -342,10 +530,13 @@ Keep the same mounted config and workspace layout so the user workflow stays sta
 ```text
 README.md
 compose.yaml
+compose.hermes.yaml
 .env.example
 docker/Dockerfile
 docker/install-r-packages.R
 config/skills/README.md
+config/ssh/config.example
+config/ssh/known_hosts.example
 workspace/synthetic-only/.gitkeep
 ```
 
@@ -356,3 +547,7 @@ Build on HolyClaude first.
 Do not rebuild from scratch yet.
 
 Design Rock so that HolyClaude can be replaced later without changing the core project concept.
+
+Support Windows through WSL2 + Docker Desktop.
+
+Support Mac mini / Hermes through optional outbound SSH from Rock, not by default exposing Rock over SSH.
