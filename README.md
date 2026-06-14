@@ -125,19 +125,111 @@ The image build downloads and compiles R packages (`tidyverse`, `shinytest2`, an
 
 The `shm_size: 2g` setting in `compose.yaml` is required by some agent browser-automation tools. Reduce it if your host RAM is constrained.
 
-## First run
+## Getting started
+
+### Step 1 — Clone the repo
+
+```bash
+git clone https://github.com/lennon-li/Rock.git
+cd Rock
+```
+
+### Step 2 — Copy the environment template
 
 ```bash
 cp .env.example .env
-docker compose build
-docker compose up -d
 ```
 
-Then place only synthetic, disposable, or explicitly approved project material under:
+### Step 3 — Add your API keys
+
+Open `.env` and add keys for the agents you want to use. Rock works with any combination — you do not need all of them.
+
+```bash
+# Add to .env
+ANTHROPIC_API_KEY=sk-ant-...      # Claude Code
+OPENAI_API_KEY=sk-...             # Codex
+GEMINI_API_KEY=...                # Gemini CLI
+```
+
+Never commit `.env` — it is gitignored.
+
+### Step 4 — Build the image
+
+```bash
+docker compose build
+```
+
+This takes 10–20 minutes on first run (R package compilation). Subsequent builds use the layer cache and are much faster.
+
+### Step 5 — Add material to the workspace
+
+Place only **synthetic, disposable, or explicitly approved** material under:
 
 ```
 workspace/synthetic-only/
 ```
+
+Do not put real project repos, real data, SSH keys, cloud credentials, or production configs here.
+
+### Step 6 — Run preflight
+
+Before starting agents, scan the workspace for anything that should not be there:
+
+```bash
+docker compose run --rm rock rock-preflight
+```
+
+Expected output if clean:
+
+```
+ROCK PREFLIGHT: Workspace looks clean.
+```
+
+If warnings appear, review the flagged files before proceeding.
+
+### Step 7 — Start the container
+
+```bash
+docker compose up -d
+```
+
+Check that it is running:
+
+```bash
+docker compose ps
+```
+
+### Step 8 — Open the agent UI
+
+Navigate to `http://localhost:3001` in your browser. This is the HolyClaude web UI — Claude Code, Codex, and Gemini CLI are available inside.
+
+### Step 9 — Work with agents
+
+Point agents at `/workspace` for file work. Proposed outputs, diffs, and handoff artifacts go in `/work/proposed`. Scratch and experiments go in `/work/scratch`.
+
+After an agent session, review what changed:
+
+```bash
+docker compose exec rock rock-summary
+```
+
+Human reviews `/work/proposed` output outside Docker. Human commits and pushes outside Docker.
+
+### Step 10 — Update agent CLIs (when needed)
+
+Agent CLIs update frequently. Refresh them without rebuilding the image:
+
+```bash
+docker compose exec rock rock-update-agent-clis
+```
+
+### Step 11 — Stop the container
+
+```bash
+docker compose down
+```
+
+Volumes persist — R packages and npm CLIs are retained across restarts.
 
 ## File map
 
