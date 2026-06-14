@@ -13,20 +13,23 @@ ENV TZ=America/Toronto \
     ROCK_INSTALL_AGY=${ROCK_INSTALL_AGY} \
     ROCK_AGY_INSTALL_COMMAND=${ROCK_AGY_INSTALL_COMMAND}
 
-# Use CRAN apt repo for current R. Key is marutter_pubkey.asc for both Ubuntu and Debian;
-# only the repo base path and codename differ by distro.
+# Use CRAN apt repo for current R. Ubuntu and Debian CRAN repos use different signing keys:
+# Ubuntu: marutter_pubkey.asc from cloud.r-project.org
+# Debian: key B8F25A8A73EACF41 from keyserver.ubuntu.com (Debian CRAN maintainer key)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
     dirmngr \
     gnupg \
     ca-certificates \
     wget \
-    && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
-         | gpg --dearmor -o /usr/share/keyrings/cran-archive-keyring.gpg \
     && . /etc/os-release \
     && if [ "$ID" = "ubuntu" ]; then \
+         wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
+             | gpg --dearmor -o /usr/share/keyrings/cran-archive-keyring.gpg; \
          CRAN_CODENAME="${UBUNTU_CODENAME:-noble}"; \
        else \
+         wget -qO- "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xB8F25A8A73EACF41" \
+             | gpg --dearmor -o /usr/share/keyrings/cran-archive-keyring.gpg; \
          CRAN_CODENAME="${VERSION_CODENAME:-bookworm}"; \
        fi \
     && echo "deb [signed-by=/usr/share/keyrings/cran-archive-keyring.gpg] https://cloud.r-project.org/bin/linux/${ID:-ubuntu} ${CRAN_CODENAME}-cran40/" \
