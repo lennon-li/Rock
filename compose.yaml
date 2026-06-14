@@ -1,0 +1,40 @@
+services:
+  rock:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        ROCK_INSTALL_AGY: ${ROCK_INSTALL_AGY:-0}
+        ROCK_AGY_INSTALL_COMMAND: ${ROCK_AGY_INSTALL_COMMAND:-curl -fsSL https://antigravity.google/cli/install.sh | bash}
+    container_name: rock
+    hostname: rock
+    restart: unless-stopped
+    shm_size: 2g
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - ./data/claude:/home/claude/.claude
+      - ./config/skills:/opt/rock/skills:ro
+      - ./config/agents:/opt/rock/agents:ro
+      - ./config/antigravity:/home/claude/.gemini/antigravity-cli:ro
+      - ./workspace/synthetic-only:/workspace
+      - rock-proposed:/work/proposed
+      - rock-scratch:/work/scratch
+      - rock-r-library:/home/claude/R/library
+      - rock-npm-global:/home/claude/.local
+    environment:
+      TZ: ${TZ:-America/Toronto}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      R_LIBS_USER: /home/claude/R/library
+      NPM_CONFIG_PREFIX: /home/claude/.local
+      PATH: /home/claude/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      HOLYCLAUDE_CODEX_CHAT_PERMISSION_MODE: ${HOLYCLAUDE_CODEX_CHAT_PERMISSION_MODE:-acceptEdits}
+      HOLYCLAUDE_CODEX_CLI_PERMISSION_MODE: ${HOLYCLAUDE_CODEX_CLI_PERMISSION_MODE:-acceptEdits}
+      ROCK_WORKSPACE_POLICY: synthetic-or-disposable-only
+
+volumes:
+  rock-proposed:
+  rock-scratch:
+  rock-r-library:
+  rock-npm-global:
