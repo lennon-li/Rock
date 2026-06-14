@@ -60,6 +60,11 @@ RUN Rscript /tmp/install-r-packages.R && rm /tmp/install-r-packages.R
 
 COPY docker/install-extra-agents.sh /usr/local/bin/install-extra-agents.sh
 COPY docker/update-agent-clis.sh /usr/local/bin/rock-update-agent-clis
-RUN chmod +x /usr/local/bin/rock-update-agent-clis && /usr/local/bin/install-extra-agents.sh
+COPY docker/rock-preflight.sh /usr/local/bin/rock-preflight
+COPY docker/rock-summary.sh /usr/local/bin/rock-summary
+RUN chmod +x /usr/local/bin/rock-update-agent-clis \
+             /usr/local/bin/rock-preflight \
+             /usr/local/bin/rock-summary \
+    && /usr/local/bin/install-extra-agents.sh
 
 WORKDIR /workspace
