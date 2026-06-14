@@ -352,13 +352,19 @@ Next.
 
 ### Phase 6 — Base Image Hardening
 
-- Pin HolyClaude image digest/version.
-- Add build labels and version metadata.
-- Consider `rock-minimal` alternative:
+Status: implemented.
+
+- Pinned HolyClaude base image to digest `sha256:fda8801a1b35fe503bfc702ef5872297f011df0d8bb71b4db58a9c7eb768dbd2`.
+- Added OCI build labels: title, description, version, source, base image.
+- `rock-minimal` documented as a future direction — not implemented.
+
+#### rock-minimal (future direction)
+
+If HolyClaude becomes too broad, too permissive, or too hard to audit, Rock can move to a minimal base without changing the mounted workspace and config model:
 
 ```text
-rock-minimal = rocker/r-ver + selected tools only
-rock-holy    = HolyClaude derivative
+rock-minimal = rocker/r-ver + npm + selected agent CLIs only (no full HolyClaude UI)
+rock-holy    = HolyClaude derivative (current)
 ```
 
-Keep the same mounted config and workspace layout across both.
+Both variants would use the same compose volumes, mounts, and safety workflow. The switch is a one-line FROM change plus reinstating the agent CLI install layer.

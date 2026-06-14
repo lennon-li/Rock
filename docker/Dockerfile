@@ -1,4 +1,10 @@
-FROM coderluii/holyclaude:latest
+FROM coderluii/holyclaude:latest@sha256:fda8801a1b35fe503bfc702ef5872297f011df0d8bb71b4db58a9c7eb768dbd2
+
+LABEL org.opencontainers.image.title="Rock" \
+      org.opencontainers.image.description="R-centered AI agent docking container for data-science application development" \
+      org.opencontainers.image.version="0.1.0" \
+      org.opencontainers.image.source="https://github.com/lennon-li/Rock" \
+      org.opencontainers.image.base.name="coderluii/holyclaude:latest@sha256:fda8801a1b35fe503bfc702ef5872297f011df0d8bb71b4db58a9c7eb768dbd2"
 
 USER root
 
