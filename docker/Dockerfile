@@ -13,22 +13,23 @@ ENV TZ=America/Toronto \
     ROCK_INSTALL_AGY=${ROCK_INSTALL_AGY} \
     ROCK_AGY_INSTALL_COMMAND=${ROCK_AGY_INSTALL_COMMAND}
 
-# Use CRAN__linux__ubuntu apt repo for current R on Ubuntu rather than distro-stale R.
+# Use CRAN apt repo for current R. Key is marutter_pubkey.asc for both Ubuntu and Debian;
+# only the repo base path and codename differ by distro.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
     dirmngr \
     gnupg \
     ca-certificates \
     wget \
+    && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc \
+         | gpg --dearmor -o /usr/share/keyrings/cran-archive-keyring.gpg \
     && . /etc/os-release \
     && if [ "$ID" = "ubuntu" ]; then \
-         CRAN_BASE=ubuntu; CRAN_KEYFILE=marutter_pubkey.asc; CRAN_CODENAME="${UBUNTU_CODENAME:-noble}"; \
+         CRAN_CODENAME="${UBUNTU_CODENAME:-noble}"; \
        else \
-         CRAN_BASE=debian; CRAN_KEYFILE=johanneke-labuschagne-public-key.gpg; CRAN_CODENAME="${VERSION_CODENAME:-bookworm}"; \
+         CRAN_CODENAME="${VERSION_CODENAME:-bookworm}"; \
        fi \
-    && wget -qO- "https://cloud.r-project.org/bin/linux/${CRAN_BASE}/${CRAN_KEYFILE}" \
-         | gpg --dearmor -o /usr/share/keyrings/cran-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/cran-archive-keyring.gpg] https://cloud.r-project.org/bin/linux/${CRAN_BASE} ${CRAN_CODENAME}-cran40/" \
+    && echo "deb [signed-by=/usr/share/keyrings/cran-archive-keyring.gpg] https://cloud.r-project.org/bin/linux/${ID:-ubuntu} ${CRAN_CODENAME}-cran40/" \
          > /etc/apt/sources.list.d/cran-r.list \
     && apt-get update && apt-get install -y --no-install-recommends \
     r-base \
