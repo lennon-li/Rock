@@ -62,5 +62,4 @@ COPY docker/install-extra-agents.sh /usr/local/bin/install-extra-agents.sh
 COPY docker/update-agent-clis.sh /usr/local/bin/rock-update-agent-clis
 RUN chmod +x /usr/local/bin/rock-update-agent-clis && /usr/local/bin/install-extra-agents.sh
 
-USER claude
 WORKDIR /workspace
