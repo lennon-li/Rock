@@ -1,0 +1,14 @@
+# Optional outbound SSH overlay. Adds SSH config and known hosts into the container
+# so Rock can reach a remote host. Does not run an SSH server inside Rock.
+#
+# Usage:
+#   docker compose -f compose.yaml -f compose.ssh.yaml up -d
+#
+# Fill in config/ssh/config.example and config/ssh/known_hosts.example before use.
+services:
+  rock:
+    volumes:
+      - ./config/ssh/config.example:/home/claude/.ssh/config:ro
+      - ./config/ssh/known_hosts.example:/home/claude/.ssh/known_hosts:ro
+    environment:
+      ROCK_SSH_BRIDGE: outbound only

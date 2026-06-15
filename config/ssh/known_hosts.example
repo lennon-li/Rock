@@ -1,0 +1,2 @@
+# Add pinned host keys here after verification.
+# Run: ssh-keyscan -H <hostname> to get the key, then paste it below.

@@ -1,0 +1,12 @@
+# SSH client config for outbound connections from Rock.
+# Mount this file read-only via compose.ssh.yaml.
+#
+# Do not mount your host ~/.ssh directory into Rock.
+# Use a dedicated, restricted key for each remote host.
+#
+# Example:
+Host myserver
+  HostName 192.168.1.100
+  User myuser
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/rock_outbound_key

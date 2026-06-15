@@ -18,7 +18,7 @@ Rock = R/data-science safety workflow
      + persistent agent CLI volume
      + HolyClaude as the runtime engine
      + all-agent CLI update helper
-     + optional outbound SSH bridge to Hermes / Mac mini
+     + optional outbound SSH access to remote hosts
 ```
 
 The base image is [HolyClaude](https://github.com/coderluii/holyclaude) — a pre-built AI agent runtime container with Claude Code, Codex, and Gemini CLI wired up. Rock adds the R environment, data-science packages, and the safety workflow layer on top. The base image is not the identity of Rock; it is replaceable if a lighter or more auditable base is needed later.
@@ -59,14 +59,14 @@ Windows / Linux / macOS host
       -> ./workspace/synthetic-only only
 ```
 
-**Mode 2: Local agent dock with Hermes bridge**
+**Mode 2: Local agent dock with SSH access**
 
 ```
 Windows laptop
   -> WSL2 + Docker Desktop
     -> Rock container
       -> ./workspace/synthetic-only
-      -> outbound SSH to Mac mini / Hermes host
+      -> outbound SSH to remote host
 ```
 
 **Mode 3: Remote-accessed local dock**
@@ -243,12 +243,12 @@ config/
   agents/AGENTS.md              Agent policy file mounted read-only into the container
   antigravity/                  AGY / Antigravity config mount
   skills/                       Custom skills mounted read-only into the container
-  ssh/config.example            SSH config template for Hermes bridge (fill before use)
-  ssh/known_hosts.example       Known hosts for Hermes SSH (pin before use)
+  ssh/config.example            SSH config template for remote host bridge (fill before use)
+  ssh/known_hosts.example       Known hosts for remote host SSH (pin before use)
 data/claude/                    Persistent Claude config (mounted to /home/claude/.claude)
 workspace/synthetic-only/       Default writable workspace — synthetic/disposable only
 compose.yaml                    Main Compose file
-compose.hermes.yaml             Optional overlay for Hermes SSH bridge
+compose.ssh.yaml                Optional overlay for outbound SSH access
 .env.example                    Environment variable template
 scripts/check-scaffold.sh       Validates the scaffold is intact before building
 ```
@@ -335,19 +335,21 @@ ROCK_AGY_INSTALL_COMMAND="curl -fsSL https://antigravity.google/cli/install.sh |
 
 AGY / Antigravity / Argie should be treated as a large-context audit and synthesis lane, read-only by default. Official docs: https://antigravity.google/docs/cli-using
 
-## Hermes bridge
+## SSH access
 
-Rock can reach outward to a Hermes / Mac mini host through the optional compose overlay:
+Rock can reach remote hosts via the optional compose overlay:
 
 ```bash
-docker compose -f compose.yaml -f compose.hermes.yaml up -d
+docker compose -f compose.yaml -f compose.ssh.yaml up -d
 ```
 
+Fill in `config/ssh/config.example` with your host details and add pinned host keys to `config/ssh/known_hosts.example` before use.
+
 Rules:
-- Outbound SSH from Rock to Hermes only — no inbound SSH server inside Rock.
-- Do not mount the broad host `~/.ssh` directory.
-- Use specific, read-only or restricted keys when needed.
-- Pin the Hermes host key in `config/ssh/known_hosts.example` before real use.
+- Outbound SSH from Rock only — no inbound SSH server inside Rock.
+- Do not mount your host `~/.ssh` directory into the container.
+- Use a dedicated, restricted key per remote host.
+- Always pin host keys before connecting.
 
 ## Verification
 

@@ -26,7 +26,7 @@ Rock = R/data-science safety workflow
      + persistent user package/CLI volumes
      + HolyClaude as the initial runtime engine
      + all-agent CLI update helper
-     + optional outbound SSH bridge to Hermes / Mac mini
+     + optional outbound SSH access to remote hosts
 ```
 
 HolyClaude is the current base image, not the identity of Rock. Rock should remain replaceable later. If HolyClaude becomes too broad, too permissive, or too hard to audit, Rock should be able to move to `rocker/r-ver` or another minimal Linux base while keeping the same mounted workspace/config model.
@@ -42,12 +42,12 @@ Mode 1: Local-only agent dock
       -> Rock container
         -> mounted synthetic/disposable workspace only
 
-Mode 2: Local agent dock with Hermes bridge
+Mode 2: Local agent dock with SSH access
   Windows laptop
     -> WSL2 + Docker Desktop
       -> Rock container
         -> mounted synthetic/disposable workspace only
-        -> outbound SSH to Mac mini / Hermes
+        -> outbound SSH to remote host
 
 Mode 3: Remote-accessed local dock
   User device
@@ -58,7 +58,7 @@ Mode 3: Remote-accessed local dock
 
 Default mode is Mode 1.
 
-Mode 2 is allowed when Rock needs to talk to a long-running Hermes host. The bridge should be outbound SSH from Rock to Hermes, not inbound SSH into Rock.
+Mode 2 is allowed when Rock needs to reach a remote host. The connection should be outbound SSH from Rock, not inbound SSH into Rock.
 
 Mode 3 must not mean public port-forwarding directly to the web UI.
 
@@ -114,7 +114,7 @@ config/
 data/claude/.gitkeep
 workspace/synthetic-only/.gitkeep
 compose.yaml
-compose.hermes.yaml
+compose.ssh.yaml
 .env.example
 scripts/check-scaffold.sh
 README.md
@@ -266,12 +266,12 @@ The web UI port must bind locally:
 
 For high-trust synthetic-only work, `bypassPermissions` can be considered, but only after the mounted workspace is verified to contain no sensitive or real data.
 
-## Hermes / Mac mini SSH Bridge
+## SSH Access
 
-Rock may connect outward to Hermes / Mac mini through the optional overlay:
+Rock can connect outward to remote hosts through the optional overlay:
 
 ```bash
-docker compose -f compose.yaml -f compose.hermes.yaml up -d
+docker compose -f compose.yaml -f compose.ssh.yaml up -d
 ```
 
 Rules:
@@ -295,7 +295,7 @@ Rules:
 - Keep `/workspace` writable but treat it as synthetic/disposable only.
 - Keep commits, pushes, releases, deployments, and publishing human-owned.
 - Support Windows through WSL2 + Docker Desktop.
-- Support Hermes through optional outbound SSH, not public/inbound SSH.
+- Support outbound SSH to remote hosts, not inbound SSH into Rock.
 
 ## Phase Plan
 
@@ -343,12 +343,12 @@ Next.
 - Warn before agent work if suspicious files are mounted.
 - Add post-run diff/status summary helper.
 
-### Phase 5 — Hermes Bridge Validation
+### Phase 5 — SSH Access Validation
 
-- Fill real SSH config only after approval.
-- Pin Hermes host key.
-- Confirm outbound SSH works.
-- Confirm Rock cannot access broader host data through the bridge.
+- Fill `config/ssh/config.example` with real host details.
+- Pin remote host key in `config/ssh/known_hosts.example`.
+- Confirm outbound SSH works from inside the container.
+- Confirm Rock cannot access broader host data through the connection.
 
 ### Phase 6 — Base Image Hardening
 
