@@ -26,6 +26,83 @@ A Docker container for agentic R-based data science. Run Claude Code, Codex, and
 
 ---
 
+## Windows setup
+
+Rock runs on Windows through WSL2 (Windows Subsystem for Linux) and Docker Desktop. Complete these steps once before the regular setup below.
+
+**Requirements:** Windows 10 version 2004 or later, or Windows 11.
+
+---
+
+**Step 1 — Install WSL2**
+
+Open PowerShell as Administrator (right-click Start → Windows PowerShell (Admin)) and run:
+
+```powershell
+wsl --install
+```
+
+This installs WSL2 and Ubuntu automatically. Restart your computer when prompted.
+
+If you already have WSL installed, make sure it is version 2:
+
+```powershell
+wsl --set-default-version 2
+```
+
+---
+
+**Step 2 — Set up Ubuntu**
+
+After restarting, Ubuntu will open automatically and ask you to create a username and password. This is your Linux account inside WSL — it does not need to match your Windows account.
+
+If it does not open automatically, find **Ubuntu** in the Start menu and launch it.
+
+---
+
+**Step 3 — Download and install Docker Desktop**
+
+Go to [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) and download the Windows installer.
+
+Run the installer. When asked, make sure **Use WSL 2 instead of Hyper-V** is checked.
+
+---
+
+**Step 4 — Enable Docker integration with Ubuntu**
+
+Open Docker Desktop. Go to:
+
+```
+Settings → Resources → WSL Integration
+```
+
+Turn on integration for your Ubuntu distribution. Click **Apply & Restart**.
+
+---
+
+**Step 5 — Open an Ubuntu terminal**
+
+From the Start menu, open **Ubuntu** (or use **Windows Terminal** and select Ubuntu from the dropdown). All remaining commands run inside this Ubuntu terminal — not in PowerShell or Command Prompt.
+
+---
+
+**Step 6 — Verify Docker works**
+
+In the Ubuntu terminal:
+
+```bash
+docker --version
+docker compose version
+```
+
+Both should print version numbers. If you see "command not found", Docker Desktop may not be running — check the system tray.
+
+---
+
+**You are now ready to proceed with the setup below.**
+
+---
+
 ## Setup
 
 **1. Clone and configure**
