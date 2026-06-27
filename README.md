@@ -198,16 +198,46 @@ docker compose exec rock claude
 
 ## Using Codex
 
-Set your key in `.env`:
+**Login with a ChatGPT Plus/Pro subscription (no API key needed):**
+
+Simply run Codex:
+```bash
+docker compose exec rock codex
+```
+If no active session exists, this prompts you to sign in. Select **Sign in with ChatGPT** (or **Sign in with Device Code** for headless environments) to authenticate via the browser.
+
+**Or set an API key in `.env`:**
 
 ```
 OPENAI_API_KEY=sk-...
 ```
 
-Then run inside the container:
+---
+
+## Using OpenCode
+
+**Login with OpenCode auth (no API key needed):**
 
 ```bash
-docker compose exec rock codex
+docker compose exec rock opencode auth login
+```
+This manages provider API keys or subscription sessions via browser authentication.
+
+---
+
+## Using AGY / Antigravity
+
+**Login with Google AI / Google Cloud subscription (no API key needed):**
+
+Simply run `agy` to trigger the interactive browser-based Google OAuth flow:
+```bash
+docker compose exec rock agy
+```
+
+**Or set an API key in `.env`:**
+
+```
+GEMINI_API_KEY=...
 ```
 
 ---
