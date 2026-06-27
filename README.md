@@ -72,7 +72,7 @@ If it does not open automatically, find **Ubuntu** in the Start menu and launch 
 
 #### Option A — Docker Desktop (Recommended for GUI Users)
 
-1. **Download and install Docker Desktop:** Go to [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) and download the Windows installer. Make sure **Use WSL 2 instead of Hyper-V** is checked during installation.
+1. **Download and install Docker Desktop:** Go to [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) and download the Windows installer. **Note: Installing Docker Desktop requires Windows Administrator privileges.** Make sure **Use WSL 2 instead of Hyper-V** is checked during installation.
 2. **Enable Integration:** Open Docker Desktop. Go to `Settings → Resources → WSL Integration`, toggle integration on for your Ubuntu distribution, and click **Apply & Restart**.
 3. **Open Terminal:** Open the **Ubuntu** terminal from your Start menu.
 4. **Verify:** In the Ubuntu terminal, run:
