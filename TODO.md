@@ -60,7 +60,7 @@ Important constraints:
 
 Definition of done:
 
-- Rock image includes or can install the agent efficiency tool stack.
-- A check command confirms which tools are installed and which are missing.
-- Agents are instructed to use `rg`, `fd`, `bat`, `jq`, `yq`, `duckdb`, `ast-grep`, `rga`, `just`, `repomix`, and `code2prompt` for token-saving repo work.
-- README documents the check/install commands.
+- [x] Rock image includes or can install the agent efficiency tool stack.
+- [x] A check command confirms which tools are installed and which are missing.
+- [x] Agents are instructed to use `rg`, `fd`, `bat`, `jq`, `yq`, `duckdb`, `ast-grep`, `rga`, `just`, `repomix`, and `code2prompt` for token-saving repo work.
+- [x] README documents the check/install commands.

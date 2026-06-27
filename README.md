@@ -22,6 +22,9 @@ A Docker container for agentic R-based data science. Run Claude Code, Codex, and
 - `rock-preflight` scans for secrets before agent sessions
 - `rock-summary` shows what changed after a session
 
+**Agent efficiency & token-saving tools**
+- Fast search (`rg`, `fd`, `rga`), file inspection (`bat`, `jq`, `yq`, `duckdb`), code/structural search (`ast-grep`), repo packing/context (`repomix`, `code2prompt`), and workflow helpers (`just`, `direnv`, `delta`, `difft`, `hyperfine`, `eza`, `dust`, `uv`, `nox`, `tox`, `gh`).
+
 **Requirements:** Docker Desktop (Windows/macOS) or Docker Engine (Linux), 8 GB RAM, 20 GB disk. No R or Node.js needed on the host.
 
 ---
@@ -285,4 +288,20 @@ Review what changed after a session:
 
 ```bash
 docker compose exec rock rock-summary
+```
+
+---
+
+## Agent efficiency tools
+
+Verify which efficiency and token-saving tools are installed and which are missing:
+
+```bash
+docker compose exec rock rock-check-agent-tools
+```
+
+Install or update all required agent tools manually inside the container (this is run automatically during image build):
+
+```bash
+docker compose exec rock rock-install-missing-agent-tools
 ```
