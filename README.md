@@ -31,13 +31,20 @@ A Docker container for agentic R-based data science. Run Claude Code, Codex, and
 
 ## Windows setup
 
-Rock runs on Windows through WSL2 (Windows Subsystem for Linux) and Docker Desktop. Complete these steps once before the regular setup below.
+Rock runs on Windows through WSL 2 (Windows Subsystem for Linux). You have two options for running Docker with WSL 2:
 
-**Requirements:** Windows 10 version 2004 or later, or Windows 11.
+### Docker Setup Options Comparison
+
+| Feature / Metric | Option A: Docker Desktop | Option B: Native WSL 2 Docker Engine |
+|---|---|---|
+| **License & Cost** | Free for personal/small business; paid subscription for large enterprises. | 100% Free and Open Source (Apache 2.0). |
+| **Resource Usage** | Higher RAM/CPU overhead (runs helper services on both Windows and WSL 2). | Extremely lightweight (runs natively as a Linux process inside WSL 2). |
+| **User Interface** | Full graphical dashboard GUI for container management. | Command-line only (`docker` and `docker compose`). |
+| **Management** | Automates background startup, port forwarding, and VM lifecycle. | Requires manual daemon startup (`sudo service docker start`) unless systemd is enabled. |
 
 ---
 
-**Step 1 — Install WSL2**
+### Step 1 — Install WSL 2 (Required for both)
 
 Open PowerShell as Administrator (right-click Start → Windows PowerShell (Admin)) and run:
 
@@ -45,9 +52,7 @@ Open PowerShell as Administrator (right-click Start → Windows PowerShell (Admi
 wsl --install
 ```
 
-This installs WSL2 and Ubuntu automatically. Restart your computer when prompted.
-
-If you already have WSL installed, make sure it is version 2:
+This installs WSL 2 and Ubuntu automatically. Restart your computer when prompted. If you already have WSL installed, ensure it is version 2:
 
 ```powershell
 wsl --set-default-version 2
@@ -55,7 +60,7 @@ wsl --set-default-version 2
 
 ---
 
-**Step 2 — Set up Ubuntu**
+### Step 2 — Set up Ubuntu (Required for both)
 
 After restarting, Ubuntu will open automatically and ask you to create a username and password. This is your Linux account inside WSL — it does not need to match your Windows account.
 
@@ -63,42 +68,59 @@ If it does not open automatically, find **Ubuntu** in the Start menu and launch 
 
 ---
 
-**Step 3 — Download and install Docker Desktop**
+### Choose your installation path:
 
-Go to [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) and download the Windows installer.
+#### Option A — Docker Desktop (Recommended for GUI Users)
 
-Run the installer. When asked, make sure **Use WSL 2 instead of Hyper-V** is checked.
-
----
-
-**Step 4 — Enable Docker integration with Ubuntu**
-
-Open Docker Desktop. Go to:
-
-```
-Settings → Resources → WSL Integration
-```
-
-Turn on integration for your Ubuntu distribution. Click **Apply & Restart**.
+1. **Download and install Docker Desktop:** Go to [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) and download the Windows installer. Make sure **Use WSL 2 instead of Hyper-V** is checked during installation.
+2. **Enable Integration:** Open Docker Desktop. Go to `Settings → Resources → WSL Integration`, toggle integration on for your Ubuntu distribution, and click **Apply & Restart**.
+3. **Open Terminal:** Open the **Ubuntu** terminal from your Start menu.
+4. **Verify:** In the Ubuntu terminal, run:
+   ```bash
+   docker --version
+   docker compose version
+   ```
 
 ---
 
-**Step 5 — Open an Ubuntu terminal**
+#### Option B — Native Docker Engine (Recommended for 100% WSL users)
 
-From the Start menu, open **Ubuntu** (or use **Windows Terminal** and select Ubuntu from the dropdown). All remaining commands run inside this Ubuntu terminal — not in PowerShell or Command Prompt.
+1. **Open Terminal:** Open the **Ubuntu** terminal from your Start menu.
+2. **Install Docker Engine:** Run the following commands to install native Linux Docker:
+   ```bash
+   # Remove conflicting packages
+   for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do sudo apt-get remove $pkg; done
 
----
+   # Set up Docker's apt repository
+   sudo apt-get update
+   sudo apt-get install -y ca-certificates curl gnupg
+   sudo install -m 0755 -d /etc/apt/keyrings
+   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+   sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-**Step 6 — Verify Docker works**
+   echo \
+     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+     $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-In the Ubuntu terminal:
-
-```bash
-docker --version
-docker compose version
-```
-
-Both should print version numbers. If you see "command not found", Docker Desktop may not be running — check the system tray.
+   # Install Docker CE packages
+   sudo apt-get update
+   sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+   ```
+3. **Set permissions:** Add your WSL user to the `docker` group so you don't need `sudo` for container commands:
+   ```bash
+   sudo usermod -aG docker $USER
+   ```
+   *(Close the terminal and open a new Ubuntu window to apply group changes).*
+4. **Start the daemon:** Start Docker inside WSL:
+   ```bash
+   sudo service docker start
+   ```
+5. **Verify:** Run:
+   ```bash
+   docker --version
+   docker compose version
+   ```
 
 ---
 
