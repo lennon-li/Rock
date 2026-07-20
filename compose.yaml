@@ -12,6 +12,8 @@ services:
     shm_size: 2g
     ports:
       - "127.0.0.1:3001:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data/claude:/home/claude/.claude
       - ./config/skills:/opt/rock/skills:ro
@@ -32,6 +34,12 @@ services:
       HOLYCLAUDE_CODEX_CHAT_PERMISSION_MODE: ${HOLYCLAUDE_CODEX_CHAT_PERMISSION_MODE:-acceptEdits}
       HOLYCLAUDE_CODEX_CLI_PERMISSION_MODE: ${HOLYCLAUDE_CODEX_CLI_PERMISSION_MODE:-acceptEdits}
       ROCK_WORKSPACE_POLICY: synthetic-or-disposable-only
+      ROCK_LOCAL_LLM_BASE_URL: ${ROCK_LOCAL_LLM_BASE_URL:-}
+      ROCK_LOCAL_LLM_API_KEY: ${ROCK_LOCAL_LLM_API_KEY:-not-needed}
+      ROCK_LOCAL_LLM_MODEL: ${ROCK_LOCAL_LLM_MODEL:-local-model}
+      ROCK_LOCAL_LLM_MAX_TOKENS: ${ROCK_LOCAL_LLM_MAX_TOKENS:-4096}
+      ROCK_LOCAL_LLM_TEMPERATURE: ${ROCK_LOCAL_LLM_TEMPERATURE:-0.2}
+      ROCK_LOCAL_LLM_TIMEOUT_SECONDS: ${ROCK_LOCAL_LLM_TIMEOUT_SECONDS:-120}
 
 volumes:
   rock-proposed:
