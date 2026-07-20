@@ -2,32 +2,42 @@
 
 ## Purpose
 
-Rock provides the isolated workstation. This workflow provides the autonomous execution loop.
+Rock provides the isolated workstation. This workflow provides a Markdown control plane for a Hermes-supervised implementation and verification loop.
 
 ```text
-User goal
-  -> Hermes supervises
+User-approved goal and dispatch scope
+  -> Hermes prepares bounded packets
   -> worker agent implements
-  -> reviewer agent validates
-  -> Hermes accepts, retries, or escalates
-  -> human approves publication
+  -> Hermes independently re-verifies
+  -> reviewer agent audits when useful
+  -> Hermes accepts, revises, blocks, or returns a human gate
+  -> human owns commit, push, release, and deployment
 ```
 
-The workflow is model-agnostic. Hermes may delegate to Claude Code, Codex, Gemini CLI, OpenCode, AGY, or another available agent.
+This workflow follows the canonical Obsidian policies `DELEGATION.md`, `COMPLETION_REPORTING.md`, and the packet skill. Rock does not weaken those policies.
 
-## Design principles
+## Non-negotiable gates
 
-1. **One supervisor:** Hermes owns task state and completion decisions.
-2. **Small delegated jobs:** workers receive bounded tasks with explicit acceptance criteria.
-3. **Evidence over claims:** completion requires commands, results, diffs, and artifacts.
-4. **Independent review:** the implementing worker does not approve its own work.
-5. **Bounded loops:** retries are limited; repeated failure escalates to the human.
-6. **Human publishing boundary:** agents do not commit, push, release, or deploy.
-7. **Markdown control plane:** task state is stored as readable files, not hidden in chat history.
+- Hermes/Remy is the only project-governor delegator.
+- Workers do not delegate to other workers.
+- Hermes may draft packets without approval, but must not launch a state-changing worker until Lennon gives explicit approval for that specific dispatch.
+- A single bounded local read-only inspection may use the existing policy exception: one invocation, no loop, no chained dispatch.
+- Authorization is exactly one of:
+  - `Authorization: READ-ONLY`
+  - `Authorization: MAY MODIFY FILES WITHIN SCOPE`
+- Missing authorization means read-only.
+- Scope expansion, commit, push, delete, install, network writes, secrets, cloud/config changes, release, and deployment require separate explicit approval.
+- Subagent output is unverified until Hermes reruns the decisive checks and audits scope.
+
+## What is automated
+
+After Lennon approves a specific implementation packet, Hermes may run the complete bounded task without pausing for ordinary reads, edits, and development commands already authorized by that packet. Hermes may perform the implementation-review-revision loop within the approved scope, provided no new gated action is introduced.
+
+A retry is not permission to expand scope. Every retry must remain inside the original allowed paths, actions, resource permissions, and stop conditions.
 
 ## Run directory
 
-Each goal gets a run directory:
+Each approved goal gets a run directory:
 
 ```text
 /work/proposed/runs/<run-id>/
@@ -35,14 +45,15 @@ Each goal gets a run directory:
   PLAN.md
   STATUS.md
   DECISIONS.md
-  tasks/
+  packets/
     T001.md
-    T002.md
+  reports/
+    T001-attempt-1.md
   reviews/
-    T001-review.md
+    T001-review-1.md
   evidence/
-    T001-tests.txt
-    T001-diff.patch
+    T001-tests-attempt-1.txt
+    T001-attempt-1.patch
   FINAL.md
 ```
 
@@ -51,151 +62,147 @@ Use a run ID such as `2026-07-20-package-tests`.
 ## Lifecycle
 
 ```text
-INTAKE -> PLANNED -> EXECUTING -> REVIEWING ->
-  ACCEPTED | RETRYING | BLOCKED | HUMAN_REVIEW
+DRAFTED -> AWAITING_DISPATCH_APPROVAL -> APPROVED -> EXECUTING -> REVERIFYING ->
+  ACCEPTED | REVISION_APPROVAL_REQUIRED | BLOCKED | HUMAN_REVIEW
 ```
 
-### 1. Intake
+A revision may execute without a new dispatch approval only when it stays wholly within the originally approved packet. Any scope or permission change returns to `AWAITING_DISPATCH_APPROVAL`.
 
-Hermes creates `GOAL.md` from the user's request. It must state:
+## 1. Intake and preflight
 
-- objective,
-- repository or workspace,
-- constraints,
-- definition of done,
-- forbidden actions,
-- human checkpoints.
+Hermes:
 
-Hermes runs `rock-preflight` before delegation.
+1. runs `rock-preflight`,
+2. identifies the project, platform, target agent/tool, repo root, base branch, and exact short SHA,
+3. confirms the workspace is disposable, synthetic, backed up, or read-only as configured,
+4. checks branch freshness before implementation work,
+5. writes `GOAL.md` with the objective, constraints, definition of done, forbidden actions, and human gates.
 
-### 2. Planning
+For branch work, check:
 
-Hermes inspects the repository using token-efficient tools and writes `PLAN.md`.
+```bash
+git fetch
+git log --oneline -1
+git rev-list --count <branch>..main
+```
 
-A plan should contain the smallest independent tasks that can be reviewed separately. Each task receives a `tasks/T###.md` file based on `config/workflows/TASK_TEMPLATE.md`.
+Reconcile first when the branch is materially stale under the canonical delegation policy.
 
-Hermes selects an agent for each task based on task needs, not agent availability alone.
+## 2. Planning and packet creation
 
-### 3. Delegation
+Hermes writes `PLAN.md` and one packet per bounded task using `config/workflows/TASK_PACKET_TEMPLATE.md`.
 
-Hermes starts a worker with:
+Every implementation packet must include:
+
+- From and To,
+- base branch and exact SHA,
+- memory commit when memory was used,
+- authorization,
+- project, platform, and target,
+- allowed and forbidden paths,
+- allowed actions and resource permissions,
+- exact required checks and expected outcomes,
+- mandatory out-of-scope handling,
+- stop conditions,
+- acceptance criteria,
+- report-back requirements.
+
+The packet must be self-contained enough for a fire-and-forget worker to succeed or stop cleanly without live questions.
+
+## 3. Dispatch gate
+
+Hermes presents the exact packet and asks Lennon for per-call approval.
+
+No state-changing worker is launched before approval. Approval applies only to the named target, packet, authorization, scope, actions, and stop conditions.
+
+The bounded read-only exception permits one local inspection without approval, but it may not loop or trigger a second agent automatically.
+
+## 4. Worker execution
+
+The worker receives:
 
 1. `config/agents/WORKER.md`,
-2. the relevant task file,
-3. only the project context needed for that task.
+2. exactly one approved task packet,
+3. only the context needed for that task.
 
-Workers may edit a disposable clone and run tools. Workers must write outputs to the run directory and may not mark their own task accepted.
+Workers may edit and test only within the authorized scope. They must not sub-delegate, commit, push, delete, install, use unapproved network access, or alter other paths.
 
-### 4. Evidence collection
+If an out-of-scope issue is discovered, the worker records it and continues within scope, or halts when the task cannot proceed. It must not fix the unrelated issue or wait for a live answer.
 
-A worker is finished only when it provides:
+## 5. Required worker evidence
 
-- changed-file list,
-- patch or diff,
-- commands executed,
-- test/check outputs,
-- unresolved risks,
-- a completion recommendation.
+A worker report must include:
 
-A verbal statement such as "tests pass" is insufficient without the command and result.
+- files inspected and changed,
+- commands executed with actual outputs or captured evidence paths,
+- verification per acceptance item, tagged as `unit test`, `CI`, `executed locally`, `rendered walkthrough`, or `NOT verified`,
+- `git status --short`,
+- `git diff --stat`,
+- final allowed-path scope audit,
+- deviations and unresolved risks,
+- patch or diff when relevant.
 
-### 5. Independent review
+"Tests pass" is not equivalent to "feature validated." Claims without evidence remain unverified.
 
-Hermes delegates review to a different agent using `config/agents/REVIEWER.md`.
+## 6. Hermes re-verification
 
-The reviewer checks:
+Hermes does not accept the worker's completion claim directly. Hermes must:
 
-- task acceptance criteria,
-- relevant tests and static checks,
-- scope control,
-- regressions and security risks,
-- documentation and TODO closure,
-- consistency between claimed and actual changes.
+1. inspect every changed path against the packet allowlist,
+2. rerun decisive functional checks,
+3. verify git status and absence of stray files,
+4. distinguish test success from feature or rendered-output validation,
+5. load R or UI verification policies when applicable,
+6. tag every acceptance item with its verification method.
 
-The reviewer writes `reviews/T###-review.md` with one verdict:
+A scope violation is a packet-compliance failure even when the extra change appears useful.
+
+## 7. Independent review
+
+For multi-file, architectural, statistical, security-sensitive, or otherwise material work, Hermes routes the evidence to a different reviewer using `config/agents/REVIEWER.md`.
+
+The reviewer is read-only and returns one verdict:
 
 ```text
 ACCEPT
-REVISE
+REVISE_WITHIN_SCOPE
 BLOCK
 HUMAN_REVIEW
 ```
 
-### 6. Retry loop
+The reviewer does not edit implementation files while acting as reviewer.
 
-For `REVISE`, Hermes updates the same task file with review findings and delegates another attempt.
+## 8. Revision loop
 
-Default limits:
+For `REVISE_WITHIN_SCOPE`, Hermes writes precise findings into the same packet's revision section and may dispatch another attempt only when the original approval already covers:
 
-- maximum implementation attempts per task: 3,
-- maximum review cycles per task: 3,
-- no repeated attempt with an unchanged instruction,
-- after the limit: mark `BLOCKED` or `HUMAN_REVIEW`.
+- the same target or an explicitly approved replacement,
+- the same allowed paths,
+- the same actions and resources,
+- the same stop conditions.
 
-Hermes records retry reasons in `DECISIONS.md`.
+Otherwise Hermes requests a new dispatch approval.
 
-### 7. Integration review
+Default limit: three implementation attempts. Each retry must use materially improved instructions. At the limit, mark the task `BLOCKED` or `HUMAN_REVIEW`.
 
-After all tasks are accepted, Hermes performs a whole-goal review:
+## 9. Integration and human gate
 
-- run the project-level validation suite,
-- inspect combined diff,
-- confirm tasks did not conflict,
-- verify documentation and status files,
-- run `rock-summary`.
+After all tasks are accepted, Hermes:
 
-Hermes writes `FINAL.md` using `config/workflows/FINAL_TEMPLATE.md`.
+- runs project-level validation,
+- checks the combined diff and scope,
+- runs `rock-summary`,
+- confirms TODO/status reconciliation,
+- writes `FINAL.md` using `config/workflows/FINAL_TEMPLATE.md`.
 
-### 8. Human gate
+Hermes completes all headless verification before involving Lennon. The remaining human gate must be concrete and normally completable in under one minute, such as inspecting a rendered artifact or deciding a specific tradeoff.
 
-Hermes presents:
+The human alone applies accepted work to the canonical repository and performs commit, push, release, or deployment after separate approval.
 
-- what changed,
-- acceptance evidence,
-- remaining risks,
-- files ready for review,
-- suggested commit message.
-
-The human reviews, applies accepted patches to the canonical repository, commits, pushes, releases, or deploys outside Rock.
-
-## Agent selection guidance
-
-| Work type | Preferred worker characteristic |
-|---|---|
-| Broad repository analysis | strong context handling and planning |
-| Focused implementation | precise code editing and test iteration |
-| Large mechanical refactor | fast repository-wide editing |
-| R/statistical validation | strong R and statistical reasoning |
-| Independent review | different model or agent from implementer |
-| Cheap first-pass inspection | local model when capability is sufficient |
-
-Hermes should use the least expensive capable agent, but never reduce validation requirements.
-
-## Stop conditions
-
-Hermes must stop and request human review when:
-
-- requirements are materially ambiguous,
-- the task requires secrets or restricted credentials,
-- destructive or irreversible actions are required,
-- acceptance criteria cannot be verified,
-- the retry limit is reached,
-- agents disagree on a material architectural or statistical decision,
-- real or sensitive data appears unexpectedly.
-
-## Minimal invocation
-
-A user-facing command can remain simple:
+## Minimal user command
 
 ```text
-Start Rock for <repo>. Goal: <objective>.
+Start Rock for <repo>. Draft a packet for this goal: <objective>.
 ```
 
-Hermes then:
-
-1. creates the run directory,
-2. writes the goal and plan,
-3. delegates tasks,
-4. reviews evidence,
-5. loops within limits,
-6. returns the final review package.
+Hermes prepares the run and packet, then stops at the dispatch gate. After Lennon approves the exact packet, Hermes executes, re-verifies, loops within scope, and returns the final review package.
