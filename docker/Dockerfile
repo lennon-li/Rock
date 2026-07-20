@@ -70,12 +70,16 @@ COPY docker/rock-preflight.sh /usr/local/bin/rock-preflight
 COPY docker/rock-summary.sh /usr/local/bin/rock-summary
 COPY docker/install-agent-tools.sh /usr/local/bin/rock-install-missing-agent-tools
 COPY docker/rock-check-agent-tools.sh /usr/local/bin/rock-check-agent-tools
+COPY docker/rock-local-llm.sh /usr/local/bin/rock-local-llm
+COPY docker/rock-local-llm-check.sh /usr/local/bin/rock-local-llm-check
 
 RUN chmod +x /usr/local/bin/rock-update-agent-clis \
              /usr/local/bin/rock-preflight \
              /usr/local/bin/rock-summary \
              /usr/local/bin/rock-install-missing-agent-tools \
              /usr/local/bin/rock-check-agent-tools \
+             /usr/local/bin/rock-local-llm \
+             /usr/local/bin/rock-local-llm-check \
     && /usr/local/bin/install-extra-agents.sh \
     && /usr/local/bin/rock-install-missing-agent-tools \
     && chown -R claude:claude /home/claude/.local
